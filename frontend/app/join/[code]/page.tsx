@@ -105,7 +105,10 @@ export default function JoinSessionPage() {
         student_id: formData.student_id.trim() || undefined,
       });
 
-      setSession(res.session_token, res.participant);
+      setSession(res.session_token, {
+        ...res.participant,
+        status: 'registered',
+      });
       router.push('/interview/upload');
     } catch (err) {
       if (err instanceof ApiError) {
