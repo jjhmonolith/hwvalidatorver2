@@ -152,7 +152,11 @@ export const sessionsApi = {
     fetchApi<{ participants: Participant[] }>(`/api/sessions/${id}/participants`, { token }),
 
   getParticipantDetail: (token: string, sessionId: string, participantId: string) =>
-    fetchApi<{ participant: Participant & { conversations: unknown[]; extracted_text?: string; analyzed_topics?: unknown } }>(
+    fetchApi<{ participant: Participant & {
+      conversations: Array<{ role: 'ai' | 'student'; content: string; topic_index: number; created_at: string }>;
+      extracted_text?: string;
+      analyzed_topics?: Array<{ title: string; description: string }>;
+    } }>(
       `/api/sessions/${sessionId}/participants/${participantId}`,
       { token }
     ),
