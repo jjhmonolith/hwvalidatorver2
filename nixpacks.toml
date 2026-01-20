@@ -1,0 +1,9 @@
+# Nixpacks configuration for monorepo - deploy backend only
+[phases.setup]
+nixPkgs = ["nodejs_20", "npm"]
+
+[phases.install]
+cmds = ["cd backend && npm install"]
+
+[start]
+cmd = "cd backend && node index.js"
