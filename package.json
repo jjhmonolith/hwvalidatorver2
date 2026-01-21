@@ -1,0 +1,13 @@
+{
+  "name": "hw-validator-v2",
+  "version": "2.0.0",
+  "private": true,
+  "scripts": {
+    "install": "cd backend && npm install",
+    "start": "cd backend && node db/migrate.js up && npm start",
+    "dev": "cd backend && npm run dev"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
