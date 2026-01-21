@@ -111,16 +111,37 @@ const command = process.argv[2];
 switch (command) {
   case 'up':
   case 'migrate':
-    migrate().catch(console.error);
+    migrate()
+      .then(() => process.exit(0))
+      .catch((err) => {
+        console.error(err);
+        process.exit(1);
+      });
     break;
   case 'reset':
-    reset().then(() => migrate()).catch(console.error);
+    reset()
+      .then(() => migrate())
+      .then(() => process.exit(0))
+      .catch((err) => {
+        console.error(err);
+        process.exit(1);
+      });
     break;
   case 'down':
-    reset().catch(console.error);
+    reset()
+      .then(() => process.exit(0))
+      .catch((err) => {
+        console.error(err);
+        process.exit(1);
+      });
     break;
   case 'status':
-    status().catch(console.error);
+    status()
+      .then(() => process.exit(0))
+      .catch((err) => {
+        console.error(err);
+        process.exit(1);
+      });
     break;
   default:
     console.log('Usage: node db/migrate.js <command>');
