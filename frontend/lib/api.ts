@@ -251,6 +251,7 @@ export const interviewApi = {
         id: string;
         student_name: string;
         status: string;
+        summary?: InterviewSummary;
       };
       interview_state: InterviewState | null;
       has_started?: boolean;

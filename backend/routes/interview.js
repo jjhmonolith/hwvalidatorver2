@@ -238,6 +238,7 @@ router.get('/state', authenticateStudent, checkReconnection, async (req, res) =>
         id: participant.id,
         student_name: participant.student_name,
         status: participant.status,
+        summary: participant.summary,
       },
       interview_state: {
         current_topic_index: state.current_topic_index,
