@@ -59,12 +59,14 @@ interface StudentState {
   interviewState: InterviewState | null;
   currentQuestion: string | null;
   isConnected: boolean;
+  _hasHydrated: boolean;
   setSession: (token: string, participant: StudentParticipant) => void;
   setInterviewState: (state: InterviewState) => void;
   setCurrentQuestion: (question: string | null) => void;
   setConnected: (connected: boolean) => void;
   updateTimeLeft: (timeLeft: number) => void;
   clearSession: () => void;
+  setHasHydrated: (state: boolean) => void;
 }
 
 export const useStudentStore = create<StudentState>()(
@@ -75,6 +77,7 @@ export const useStudentStore = create<StudentState>()(
       interviewState: null,
       currentQuestion: null,
       isConnected: false,
+      _hasHydrated: false,
       setSession: (sessionToken, participant) =>
         set({ sessionToken, participant, isConnected: true }),
       setInterviewState: (interviewState) => set({ interviewState }),
@@ -104,9 +107,13 @@ export const useStudentStore = create<StudentState>()(
           currentQuestion: null,
           isConnected: false,
         }),
+      setHasHydrated: (state) => set({ _hasHydrated: state }),
     }),
     {
       name: 'hw-validator-student',
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
     }
   )
 );

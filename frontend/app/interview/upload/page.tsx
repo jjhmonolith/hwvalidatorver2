@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 
 export default function UploadPage() {
   const router = useRouter();
-  const { sessionToken, participant, clearSession } = useStudentStore();
+  const { sessionToken, participant, clearSession, _hasHydrated } = useStudentStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [file, setFile] = useState<File | null>(null);
@@ -20,11 +20,14 @@ export default function UploadPage() {
   const [dragOver, setDragOver] = useState(false);
 
   useEffect(() => {
+    // Wait for hydration before checking session
+    if (!_hasHydrated) return;
+
     if (!sessionToken || !participant) {
       router.push('/');
       return;
     }
-  }, [sessionToken, participant, router]);
+  }, [sessionToken, participant, router, _hasHydrated]);
 
   const handleFileSelect = (selectedFile: File) => {
     if (selectedFile.type !== 'application/pdf') {
@@ -81,7 +84,17 @@ export default function UploadPage() {
     router.push('/interview/start');
   };
 
-  if (!sessionToken || !participant) return null;
+  // Show loading while hydrating or if no session
+  if (!_hasHydrated || !sessionToken || !participant) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-gray-500 mt-2">로딩 중...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
