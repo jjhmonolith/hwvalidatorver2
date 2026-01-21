@@ -68,10 +68,16 @@ export default function InterviewStartPage() {
       setError('');
 
       const res = await interviewApi.start(sessionToken, {
-        interview_mode: selectedMode || undefined,
+        chosenInterviewMode: selectedMode || undefined,
       });
 
-      setInterviewState(res.interview_state);
+      // Use interview_state from response
+      const state = res.interview_state || {
+        current_topic_index: res.current_topic_index,
+        current_phase: 'topic_active',
+        topics_state: res.topics_state,
+      };
+      setInterviewState(state);
       setCurrentQuestion(res.first_question);
       router.push('/interview');
     } catch (err) {

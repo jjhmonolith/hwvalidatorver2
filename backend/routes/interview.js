@@ -159,11 +159,16 @@ router.post('/start', authenticateStudent, async (req, res) => {
 
     res.json({
       message: 'Interview started',
-      interviewMode,
-      currentTopicIndex: 0,
-      currentTopic: firstTopic,
-      topicsState,
-      firstQuestion: question,
+      interview_mode: interviewMode,
+      current_topic_index: 0,
+      current_topic: firstTopic,
+      topics_state: topicsState,
+      first_question: question,
+      interview_state: {
+        current_topic_index: 0,
+        current_phase: 'topic_active',
+        topics_state: topicsState,
+      },
     });
   } catch (error) {
     console.error('Start interview error:', error);
@@ -188,8 +193,13 @@ router.get('/state', authenticateStudent, checkReconnection, async (req, res) =>
     if (stateResult.rows.length === 0) {
       return res.json({
         status: participant.status,
-        interviewState: null,
-        hasStarted: false,
+        participant: {
+          id: participant.id,
+          student_name: participant.student_name,
+          status: participant.status,
+        },
+        interview_state: null,
+        has_started: false,
       });
     }
 
@@ -224,16 +234,21 @@ router.get('/state', authenticateStudent, checkReconnection, async (req, res) =>
 
     res.json({
       status: participant.status,
-      interviewState: {
-        currentTopicIndex: state.current_topic_index,
-        currentPhase: state.current_phase,
-        topicsState: topicsState,
-        remainingTime: Math.max(0, Math.floor(remainingTime || 0)),
+      participant: {
+        id: participant.id,
+        student_name: participant.student_name,
+        status: participant.status,
+      },
+      interview_state: {
+        current_topic_index: state.current_topic_index,
+        current_phase: state.current_phase,
+        topics_state: topicsState,
+        remaining_time: Math.max(0, Math.floor(remainingTime || 0)),
       },
       conversations: conversationsResult.rows,
-      reconnectionInfo: req.reconnectionInfo || null,
-      analyzedTopics: participant.analyzed_topics,
-      chosenInterviewMode: participant.chosen_interview_mode,
+      reconnection_info: req.reconnectionInfo || null,
+      analyzed_topics: participant.analyzed_topics,
+      chosen_interview_mode: participant.chosen_interview_mode,
     });
   } catch (error) {
     console.error('Get state error:', error);
@@ -258,8 +273,9 @@ router.post('/heartbeat', authenticateStudent, async (req, res) => {
     if (stateResult.rows.length === 0) {
       return res.json({
         status: participant.status,
-        currentPhase: null,
-        remainingTime: null,
+        current_phase: null,
+        remaining_time: null,
+        time_left: null,
       });
     }
 
@@ -289,11 +305,12 @@ router.post('/heartbeat', authenticateStudent, async (req, res) => {
 
     res.json({
       status: participant.status,
-      currentTopicIndex: state.current_topic_index,
-      currentPhase: state.current_phase,
-      remainingTime: Math.max(0, Math.floor(remainingTime || 0)),
-      timeExpired,
-      topicsState,
+      current_topic_index: state.current_topic_index,
+      current_phase: state.current_phase,
+      remaining_time: Math.max(0, Math.floor(remainingTime || 0)),
+      time_left: Math.max(0, Math.floor(remainingTime || 0)),
+      time_expired: timeExpired,
+      topics_state: topicsState,
     });
   } catch (error) {
     console.error('Heartbeat error:', error);
@@ -387,8 +404,8 @@ router.post('/answer', authenticateStudent, async (req, res) => {
 
     res.json({
       message: 'Answer submitted',
-      nextQuestion: question,
-      turnIndex: turnIndex + 1,
+      next_question: question,
+      turn_index: turnIndex + 1,
     });
   } catch (error) {
     console.error('Answer error:', error);
@@ -469,10 +486,12 @@ router.post('/next-topic', authenticateStudent, async (req, res) => {
 
     res.json({
       message: 'Moved to next topic',
-      currentTopicIndex: nextIndex,
-      currentTopic: nextTopic,
-      firstQuestion: question,
-      topicsState,
+      current_topic_index: nextIndex,
+      topic_index: nextIndex,
+      current_topic: nextTopic,
+      topic_title: nextTopic.title,
+      first_question: question,
+      topics_state: topicsState,
     });
   } catch (error) {
     console.error('Next topic error:', error);
@@ -520,8 +539,8 @@ router.post('/topic-timeout', authenticateStudent, async (req, res) => {
 
       return res.json({
         message: 'Topic timed out - all topics completed',
-        shouldFinalize: true,
-        topicsState,
+        should_finalize: true,
+        topics_state: topicsState,
       });
     }
 
@@ -540,9 +559,9 @@ router.post('/topic-timeout', authenticateStudent, async (req, res) => {
 
     res.json({
       message: 'Topic timed out - ready for next topic',
-      nextTopicIndex: nextIndex,
-      topicsState,
-      shouldFinalize: false,
+      next_topic_index: nextIndex,
+      topics_state: topicsState,
+      should_finalize: false,
     });
   } catch (error) {
     console.error('Topic timeout error:', error);

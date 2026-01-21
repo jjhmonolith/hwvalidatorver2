@@ -77,15 +77,16 @@ export default function JoinSessionPage() {
         alert(`재접속 완료. 이탈 시간: ${formatTime(res.time_deducted)}`);
       }
 
-      // Navigate to appropriate page based on status
+      // Navigate to appropriate page based on status (use direct status field)
+      const participantStatus = res.status;
       if (
-        res.participant.status === 'interview_in_progress' ||
-        res.participant.status === 'interview_paused'
+        participantStatus === 'interview_in_progress' ||
+        participantStatus === 'interview_paused'
       ) {
         router.push('/interview');
-      } else if (res.participant.status === 'file_submitted') {
+      } else if (participantStatus === 'file_submitted') {
         router.push('/interview/start');
-      } else if (res.participant.status === 'registered') {
+      } else if (participantStatus === 'registered') {
         router.push('/interview/upload');
       } else {
         // completed, abandoned, timeout

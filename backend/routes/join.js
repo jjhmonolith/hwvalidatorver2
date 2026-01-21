@@ -142,7 +142,7 @@ router.post('/:accessCode', async (req, res) => {
           student_name: studentName.trim(),
         },
         status: existing.status,
-        isReconnection: true,
+        is_reconnection: true,
       });
     }
 
@@ -168,11 +168,11 @@ router.post('/:accessCode', async (req, res) => {
         student_name: studentName.trim(),
       },
       status: participant.status,
-      isReconnection: false,
-      sessionSettings: {
-        topicCount: session.topic_count,
-        topicDuration: session.topic_duration,
-        interviewMode: session.interview_mode,
+      is_reconnection: false,
+      session_settings: {
+        topic_count: session.topic_count,
+        topic_duration: session.topic_duration,
+        interview_mode: session.interview_mode,
       }
     });
   } catch (error) {
@@ -299,26 +299,26 @@ router.post('/reconnect', async (req, res) => {
 
     res.json({
       message: 'Reconnection successful',
-      participantId: data.id,
-      studentName: data.student_name,
+      participant_id: data.id,
+      student_name: data.student_name,
       status: data.status === 'interview_paused' ? 'interview_in_progress' : data.status,
-      timeDeducted,
-      sessionInfo: {
+      time_deducted: timeDeducted,
+      session_info: {
         id: data.session_id,
         title: data.session_title,
-        topicCount: data.topic_count,
-        topicDuration: data.topic_duration,
-        interviewMode: data.interview_mode,
+        topic_count: data.topic_count,
+        topic_duration: data.topic_duration,
+        interview_mode: data.interview_mode,
       },
-      interviewState: data.topics_state ? {
-        currentTopicIndex: data.current_topic_index,
-        currentPhase: data.current_phase,
-        topicsState: data.topics_state,
-        remainingTime,
+      interview_state: data.topics_state ? {
+        current_topic_index: data.current_topic_index,
+        current_phase: data.current_phase,
+        topics_state: data.topics_state,
+        remaining_time: remainingTime,
       } : null,
-      fileSubmitted: !!data.submitted_file_name,
-      analyzedTopics: data.analyzed_topics,
-      chosenInterviewMode: data.chosen_interview_mode,
+      file_submitted: !!data.submitted_file_name,
+      analyzed_topics: data.analyzed_topics,
+      chosen_interview_mode: data.chosen_interview_mode,
     });
   } catch (error) {
     console.error('Reconnect error:', error);

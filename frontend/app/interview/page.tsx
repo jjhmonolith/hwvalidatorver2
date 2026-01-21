@@ -107,8 +107,13 @@ export default function InterviewPage() {
       const res = await interviewApi.getState(sessionToken);
       setInterviewState(res.interview_state);
 
-      if (res.current_question && messages.length === 0) {
-        setMessages([{ role: 'ai', content: res.current_question }]);
+      // Get last AI question from conversations if available
+      if (messages.length === 0 && res.conversations && res.conversations.length > 0) {
+        const aiMessages = res.conversations.filter(c => c.role === 'ai');
+        if (aiMessages.length > 0) {
+          const lastQuestion = aiMessages[aiMessages.length - 1].content;
+          setMessages([{ role: 'ai', content: lastQuestion }]);
+        }
       }
 
       // Check if interview is completed
@@ -137,9 +142,11 @@ export default function InterviewPage() {
         const res = await interviewApi.heartbeat(sessionToken);
         setConnected(true);
 
-        if (res.time_left !== undefined) {
-          setTimeLeft(res.time_left);
-          updateTimeLeft(res.time_left);
+        // Use remaining_time or time_left for backward compatibility
+        const timeValue = res.remaining_time ?? res.time_left;
+        if (timeValue !== undefined) {
+          setTimeLeft(timeValue);
+          updateTimeLeft(timeValue);
         }
 
         // Check for phase changes

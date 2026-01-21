@@ -191,9 +191,21 @@ export const joinApi = {
   reconnect: (sessionToken: string) =>
     fetchApi<{
       message: string;
-      participant: Participant;
-      interview_state?: InterviewState;
+      participant_id: string;
+      student_name: string;
+      status: string;
       time_deducted?: number;
+      session_info?: {
+        id: string;
+        title: string;
+        topic_count: number;
+        topic_duration: number;
+        interview_mode: string;
+      };
+      interview_state?: InterviewState;
+      file_submitted?: boolean;
+      analyzed_topics?: Array<{ title: string; description: string }>;
+      chosen_interview_mode?: string;
     }>('/api/join/reconnect', { method: 'POST', body: JSON.stringify({ sessionToken }) }),
 };
 
@@ -221,25 +233,42 @@ export const interviewApi = {
     };
   },
 
-  start: (sessionToken: string, data?: { interview_mode?: 'voice' | 'chat' }) =>
+  start: (sessionToken: string, data?: { chosenInterviewMode?: 'voice' | 'chat' }) =>
     fetchApi<{
       message: string;
-      interview_state: InterviewState;
+      interview_mode: string;
+      current_topic_index: number;
+      current_topic: { title: string; description: string };
+      topics_state: Array<{ index: number; title: string; totalTime: number; timeLeft: number; status: string; started: boolean }>;
       first_question: string;
+      interview_state: InterviewState;
     }>('/api/interview/start', { method: 'POST', sessionToken, body: JSON.stringify(data || {}) }),
 
   getState: (sessionToken: string) =>
     fetchApi<{
-      participant: Participant;
-      interview_state: InterviewState;
-      current_question?: string;
+      status: string;
+      participant: {
+        id: string;
+        student_name: string;
+        status: string;
+      };
+      interview_state: InterviewState | null;
+      has_started?: boolean;
+      conversations?: Array<{ topic_index: number; turn_index: number; role: string; content: string }>;
+      reconnection_info?: unknown;
+      analyzed_topics?: Array<{ title: string; description: string }>;
+      chosen_interview_mode?: string;
     }>('/api/interview/state', { sessionToken }),
 
   heartbeat: (sessionToken: string) =>
     fetchApi<{
       status: string;
-      current_phase: string;
+      current_topic_index?: number;
+      current_phase: string | null;
+      remaining_time?: number;
       time_left?: number;
+      time_expired?: boolean;
+      topics_state?: Array<{ index: number; title: string; totalTime: number; timeLeft: number; status: string; started: boolean }>;
     }>('/api/interview/heartbeat', { method: 'POST', sessionToken }),
 
   submitAnswer: (sessionToken: string, data: { answer: string }) =>
@@ -252,9 +281,12 @@ export const interviewApi = {
   nextTopic: (sessionToken: string) =>
     fetchApi<{
       message: string;
+      current_topic_index: number;
       topic_index: number;
+      current_topic: { title: string; description: string };
       topic_title: string;
       first_question: string;
+      topics_state: Array<{ index: number; title: string; totalTime: number; timeLeft: number; status: string; started: boolean }>;
     }>('/api/interview/next-topic', { method: 'POST', sessionToken }),
 
   complete: (sessionToken: string) =>
