@@ -17,18 +17,23 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// CORS 설정
+// CORS 설정 - 환경변수와 기본 도메인 병합
 const defaultOrigins = [
   'http://localhost:3010',
   'https://hwvalidatorver2.vercel.app',
   'https://hwvalidatorver2-git-main-jjhmonoliths-projects.vercel.app'
 ];
+const envOrigins = process.env.FRONT_ORIGIN?.split(',').map(o => o.trim()).filter(Boolean) || [];
+const allowedOrigins = [...new Set([...defaultOrigins, ...envOrigins])];
+
 const corsOptions = {
-  origin: process.env.FRONT_ORIGIN?.split(',') || defaultOrigins,
+  origin: allowedOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Session-Token']
 };
+
+console.log('CORS allowed origins:', allowedOrigins);
 
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
