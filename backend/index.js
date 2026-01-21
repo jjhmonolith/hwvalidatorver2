@@ -18,8 +18,13 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // CORS 설정
+const defaultOrigins = [
+  'http://localhost:3010',
+  'https://hwvalidatorver2.vercel.app',
+  'https://hwvalidatorver2-git-main-jjhmonoliths-projects.vercel.app'
+];
 const corsOptions = {
-  origin: process.env.FRONT_ORIGIN?.split(',') || ['http://localhost:3010'],
+  origin: process.env.FRONT_ORIGIN?.split(',') || defaultOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Session-Token']
