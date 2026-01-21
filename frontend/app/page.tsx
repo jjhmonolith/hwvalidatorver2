@@ -30,7 +30,10 @@ export default function HomePage() {
             </p>
           </Link>
 
-          <div className="flex flex-col items-center p-8 bg-white rounded-xl shadow-lg border border-gray-100">
+          <Link
+            href="/join"
+            className="flex flex-col items-center p-8 bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow border border-gray-100"
+          >
             <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
               <Users className="w-8 h-8 text-blue-600" />
             </div>
@@ -43,7 +46,7 @@ export default function HomePage() {
             <p className="text-sm text-gray-400">
               교사에게 받은 접속 코드를 사용하세요
             </p>
-          </div>
+          </Link>
         </div>
 
         <div className="bg-gray-50 rounded-xl p-6">

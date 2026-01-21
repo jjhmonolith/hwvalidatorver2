@@ -62,7 +62,7 @@ router.post('/', authenticateTeacher, async (req, res) => {
 
     // Generate QR code URL (will be updated with actual frontend URL)
     const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3010';
-    const joinUrl = `${baseUrl}/student/join/${accessCode}`;
+    const joinUrl = `${baseUrl}/join/${accessCode}`;
     const qrCodeUrl = await generateQRCode(joinUrl);
 
     // Create session
@@ -165,7 +165,7 @@ router.get('/:id', authenticateTeacher, async (req, res) => {
 
     // Generate join URL
     const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3010';
-    const joinUrl = `${baseUrl}/student/join/${session.access_code}`;
+    const joinUrl = `${baseUrl}/join/${session.access_code}`;
 
     res.json({
       session,
@@ -203,7 +203,7 @@ router.get('/:id/qr', authenticateTeacher, async (req, res) => {
     }
 
     const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3010';
-    const accessUrl = `${baseUrl}/student/join/${session.access_code}`;
+    const accessUrl = `${baseUrl}/join/${session.access_code}`;
 
     res.json({
       qr_code: session.qr_code_url,
