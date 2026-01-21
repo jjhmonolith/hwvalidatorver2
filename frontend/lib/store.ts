@@ -85,7 +85,7 @@ export const useStudentStore = create<StudentState>()(
       setConnected: (isConnected) => set({ isConnected }),
       updateTimeLeft: (timeLeft) => {
         const state = get().interviewState;
-        if (state && state.topics_state[state.current_topic_index]) {
+        if (state && state.topics_state && state.topics_state[state.current_topic_index]) {
           const newTopicsState = [...state.topics_state];
           newTopicsState[state.current_topic_index] = {
             ...newTopicsState[state.current_topic_index],

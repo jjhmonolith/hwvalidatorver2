@@ -405,7 +405,7 @@ export default function SessionDetailPage() {
                 )}
 
                 {/* Conversations */}
-                {selectedParticipant.conversations.length > 0 && (
+                {selectedParticipant.conversations?.length > 0 && (
                   <div>
                     <h3 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
                       <MessageSquare className="w-5 h-5" />
