@@ -6,4 +6,4 @@ nixPkgs = ["nodejs_20"]
 cmds = ["cd backend && npm install"]
 
 [start]
-cmd = "cd backend && node index.js"
+cmd = "cd backend && node db/migrate.js up && npm start"
