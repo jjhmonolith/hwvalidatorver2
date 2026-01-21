@@ -105,7 +105,9 @@ export default function InterviewPage() {
 
     try {
       const res = await interviewApi.getState(sessionToken);
-      setInterviewState(res.interview_state);
+      if (res.interview_state) {
+        setInterviewState(res.interview_state);
+      }
 
       // Get last AI question from conversations if available
       if (messages.length === 0 && res.conversations && res.conversations.length > 0) {
