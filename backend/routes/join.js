@@ -136,8 +136,11 @@ router.post('/:accessCode', async (req, res) => {
       // Return existing token for reconnection
       return res.json({
         message: 'Reconnected to existing session',
-        sessionToken: existing.session_token,
-        participantId: existing.id,
+        session_token: existing.session_token,
+        participant: {
+          id: existing.id,
+          student_name: studentName.trim(),
+        },
         status: existing.status,
         isReconnection: true,
       });
@@ -159,8 +162,11 @@ router.post('/:accessCode', async (req, res) => {
 
     res.status(201).json({
       message: 'Successfully joined session',
-      sessionToken,
-      participantId: participant.id,
+      session_token: sessionToken,
+      participant: {
+        id: participant.id,
+        student_name: studentName.trim(),
+      },
       status: participant.status,
       isReconnection: false,
       sessionSettings: {
