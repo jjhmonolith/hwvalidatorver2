@@ -100,11 +100,9 @@ export default function TeacherDashboard() {
       await sessionsApi.create(token, {
         title: newSession.title,
         description: newSession.description || undefined,
-        settings: {
-          topic_count: newSession.topic_count,
-          topic_duration: newSession.topic_duration,
-          interview_mode: newSession.interview_mode,
-        },
+        topic_count: newSession.topic_count,
+        topic_duration: newSession.topic_duration,
+        interview_mode: newSession.interview_mode,
       });
       setShowCreateModal(false);
       setNewSession({

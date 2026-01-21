@@ -36,7 +36,30 @@ async function generateQRCode(url) {
  */
 router.post('/', authenticateTeacher, async (req, res) => {
   try {
-    const { title, description, topicCount, topicDuration, interviewMode, startsAt, endsAt } = req.body;
+    const {
+      title,
+      description,
+      settings,
+      // snake_case 지원
+      topic_count,
+      topic_duration,
+      interview_mode,
+      starts_at,
+      ends_at,
+      // camelCase 레거시 지원
+      topicCount,
+      topicDuration,
+      interviewMode,
+      startsAt,
+      endsAt,
+    } = req.body;
+
+    // 우선순위: snake_case > camelCase > settings > 기본값
+    const resolvedTopicCount = topic_count ?? topicCount ?? settings?.topic_count ?? 3;
+    const resolvedTopicDuration = topic_duration ?? topicDuration ?? settings?.topic_duration ?? 180;
+    const resolvedInterviewMode = interview_mode ?? interviewMode ?? settings?.interview_mode ?? 'student_choice';
+    const resolvedStartsAt = starts_at ?? startsAt ?? null;
+    const resolvedEndsAt = ends_at ?? endsAt ?? null;
 
     // Validation
     if (!title) {
@@ -76,13 +99,13 @@ router.post('/', authenticateTeacher, async (req, res) => {
         req.teacher.id,
         title,
         description || null,
-        topicCount || 3,
-        topicDuration || 180,
-        interviewMode || 'student_choice',
+        resolvedTopicCount,
+        resolvedTopicDuration,
+        resolvedInterviewMode,
         accessCode,
         qrCodeUrl,
-        startsAt || null,
-        endsAt || null,
+        resolvedStartsAt,
+        resolvedEndsAt,
       ]
     );
 

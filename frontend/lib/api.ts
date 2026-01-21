@@ -130,7 +130,13 @@ export const sessionsApi = {
   get: (token: string, id: string) =>
     fetchApi<{ session: Session }>(`/api/sessions/${id}`, { token }),
 
-  create: (token: string, data: { title: string; description?: string; settings?: Partial<SessionSettings> }) =>
+  create: (token: string, data: {
+    title: string;
+    description?: string;
+    topic_count?: number;
+    topic_duration?: number;
+    interview_mode?: 'voice' | 'chat' | 'student_choice';
+  }) =>
     fetchApi<{ message: string; session: Session }>('/api/sessions', { method: 'POST', token, body: JSON.stringify(data) }),
 
   update: (token: string, id: string, data: Partial<{ title: string; description: string } & SessionSettings>) =>
