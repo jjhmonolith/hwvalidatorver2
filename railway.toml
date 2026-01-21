@@ -2,7 +2,7 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "node db/migrate.js up && node index.js"
+startCommand = "cd /app/backend && node db/migrate.js up && npm start"
 healthcheckPath = "/health"
 healthcheckTimeout = 60
 restartPolicyType = "ON_FAILURE"
