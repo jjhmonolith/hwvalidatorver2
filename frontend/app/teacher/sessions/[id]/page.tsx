@@ -121,7 +121,24 @@ export default function SessionDetailPage() {
 
     try {
       const res = await sessionsApi.getParticipantDetail(token, sessionId, participantId);
-      setSelectedParticipant(res.participant);
+
+      // Convert conversations object to array
+      const conversationsArray: ConversationTurn[] = [];
+      if (res.conversations) {
+        Object.entries(res.conversations).forEach(([topicIndex, turns]) => {
+          turns.forEach((turn) => {
+            conversationsArray.push({
+              ...turn,
+              topic_index: parseInt(topicIndex),
+            });
+          });
+        });
+      }
+
+      setSelectedParticipant({
+        ...res.participant,
+        conversations: conversationsArray,
+      } as ParticipantDetail);
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);
@@ -376,6 +393,21 @@ export default function SessionDetailPage() {
                         ))}
                       </ul>
                     )}
+                  </div>
+                )}
+
+                {/* Extracted Text (업로드 과제 내용) */}
+                {selectedParticipant.extracted_text && (
+                  <div className="mb-6">
+                    <h3 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
+                      <FileText className="w-5 h-5" />
+                      업로드된 과제 내용
+                    </h3>
+                    <div className="p-3 bg-gray-50 rounded-lg max-h-64 overflow-y-auto">
+                      <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                        {selectedParticipant.extracted_text}
+                      </p>
+                    </div>
                   </div>
                 )}
 
