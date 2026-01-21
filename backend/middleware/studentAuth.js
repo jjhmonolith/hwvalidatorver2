@@ -7,12 +7,17 @@ import db from '../db/connection.js';
 export async function authenticateStudent(req, res, next) {
   try {
     const authHeader = req.headers.authorization;
+    const xSessionToken = req.headers['x-session-token'];
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // Support both Authorization: Bearer and X-Session-Token headers
+    let sessionToken;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      sessionToken = authHeader.split(' ')[1];
+    } else if (xSessionToken) {
+      sessionToken = xSessionToken;
+    } else {
       return res.status(401).json({ error: 'Session token required' });
     }
-
-    const sessionToken = authHeader.split(' ')[1];
 
     // Get participant with session info
     const result = await db.query(
