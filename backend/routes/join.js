@@ -63,11 +63,11 @@ router.get('/:accessCode', async (req, res) => {
         id: session.id,
         title: session.title,
         description: session.description,
-        topicCount: session.topic_count,
-        topicDuration: session.topic_duration,
-        interviewMode: session.interview_mode,
-        teacherName: session.teacher_name,
-        endsAt: session.ends_at,
+        topic_count: session.topic_count,
+        topic_duration: session.topic_duration,
+        interview_mode: session.interview_mode,
+        teacher_name: session.teacher_name,
+        ends_at: session.ends_at,
       }
     });
   } catch (error) {
