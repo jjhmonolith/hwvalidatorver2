@@ -83,7 +83,7 @@ router.get('/:accessCode', async (req, res) => {
 router.post('/:accessCode', async (req, res) => {
   try {
     const { accessCode } = req.params;
-    const { studentName, studentId } = req.body;
+    const { student_name: studentName, student_id: studentId } = req.body;
 
     if (!studentName || studentName.trim().length === 0) {
       return res.status(400).json({ error: 'Student name is required' });
