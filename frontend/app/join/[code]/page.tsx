@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Users, Clock, Settings, ArrowRight, AlertCircle } from 'lucide-react';
@@ -33,7 +33,13 @@ export default function JoinSessionPage() {
     student_id: '',
   });
 
+  // Ref to prevent reconnect after successful join
+  const hasJoinedRef = useRef(false);
+
   useEffect(() => {
+    // Don't reconnect if we just successfully joined
+    if (hasJoinedRef.current) return;
+
     // If already has a session token, try to reconnect
     if (sessionToken) {
       handleReconnect();
@@ -104,6 +110,9 @@ export default function JoinSessionPage() {
         student_name: formData.student_name.trim(),
         student_id: formData.student_id.trim() || undefined,
       });
+
+      // Prevent reconnect from being triggered by sessionToken change
+      hasJoinedRef.current = true;
 
       setSession(res.session_token, {
         ...res.participant,
