@@ -188,7 +188,7 @@ export const joinApi = {
       participant: Participant;
       interview_state?: InterviewState;
       time_deducted?: number;
-    }>('/api/join/reconnect', { method: 'POST', sessionToken }),
+    }>('/api/join/reconnect', { method: 'POST', body: JSON.stringify({ sessionToken }) }),
 };
 
 // Interview API
