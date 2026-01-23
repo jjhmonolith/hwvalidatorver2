@@ -200,6 +200,7 @@ router.get('/state', authenticateStudent, checkReconnection, async (req, res) =>
         },
         interview_state: null,
         has_started: false,
+        session_interview_mode: participant.session_interview_mode,
       });
     }
 
@@ -250,6 +251,7 @@ router.get('/state', authenticateStudent, checkReconnection, async (req, res) =>
       conversations: conversationsResult.rows,
       reconnection_info: req.reconnectionInfo || null,
       analyzed_topics: participant.analyzed_topics,
+      session_interview_mode: participant.session_interview_mode,
       chosen_interview_mode: participant.chosen_interview_mode,
     });
   } catch (error) {

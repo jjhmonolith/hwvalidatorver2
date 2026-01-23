@@ -43,9 +43,13 @@ export default function InterviewStartPage() {
       }
 
       // Check if mode selection is needed (student_choice mode)
-      // For now, assume we need to show mode selection
-      // In production, this would come from the session settings
-      setShowModeSelection(true);
+      if (res.session_interview_mode === 'student_choice') {
+        setShowModeSelection(true);
+      } else if (res.session_interview_mode === 'voice' || res.session_interview_mode === 'chat') {
+        // Teacher has set a specific mode, auto-select it
+        setSelectedMode(res.session_interview_mode);
+        setShowModeSelection(false);
+      }
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         clearSession();

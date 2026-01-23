@@ -261,6 +261,7 @@ export const interviewApi = {
       conversations?: Array<{ topic_index: number; turn_index: number; role: string; content: string }>;
       reconnection_info?: unknown;
       analyzed_topics?: Array<{ title: string; description: string }>;
+      session_interview_mode?: 'voice' | 'chat' | 'student_choice';
       chosen_interview_mode?: string;
     }>('/api/interview/state', { sessionToken }),
 
