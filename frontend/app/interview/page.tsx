@@ -474,11 +474,6 @@ export default function InterviewPage() {
             <p className="text-gray-500 mb-6">
               {isTopicExpiredWhileAway ? (
                 <>
-                  {expiredTopicTitle && (
-                    <span className="font-medium text-gray-700 block mb-2">
-                      &quot;{expiredTopicTitle}&quot;
-                    </span>
-                  )}
                   이전 주제의 시간이 종료되었습니다.
                   <br />
                   다음 주제로 넘어갈 준비가 되면 버튼을 눌러주세요.

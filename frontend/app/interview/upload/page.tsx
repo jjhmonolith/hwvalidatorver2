@@ -18,6 +18,7 @@ export default function UploadPage() {
   const [topics, setTopics] = useState<Array<{ title: string; description: string }>>([]);
   const [error, setError] = useState('');
   const [dragOver, setDragOver] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   useEffect(() => {
     // Wait for hydration before checking session
@@ -40,6 +41,27 @@ export default function UploadPage() {
     try {
       const res = await interviewApi.getState(sessionToken);
       if (res.participant) {
+        const participantStatus = res.participant.status;
+
+        // 상태 기반 리다이렉트 (file_submitted 이상인 경우)
+        if (participantStatus === 'interview_in_progress' ||
+            participantStatus === 'interview_paused') {
+          setIsRedirecting(true);
+          router.push('/interview');
+          return;
+        } else if (participantStatus === 'file_submitted') {
+          setIsRedirecting(true);
+          router.push('/interview/start');
+          return;
+        } else if (participantStatus === 'completed' ||
+                   participantStatus === 'abandoned' ||
+                   participantStatus === 'timeout') {
+          setIsRedirecting(true);
+          router.push('/interview/complete');
+          return;
+        }
+        // 'registered' 상태: 현재 페이지 유지 (업로드 폼 표시)
+
         setParticipant({
           id: res.participant.id,
           student_name: res.participant.student_name,
@@ -115,8 +137,8 @@ export default function UploadPage() {
   // No session token - will redirect to home in useEffect
   if (!sessionToken) return null;
 
-  // Show loading while participant info is being fetched
-  if (!participant) {
+  // Show loading while participant info is being fetched or redirecting
+  if (!participant || isRedirecting) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -243,23 +265,8 @@ export default function UploadPage() {
                   파일 분석 완료
                 </div>
                 <p className="text-green-600 text-sm">
-                  AI가 과제를 분석하여 {topics.length}개의 주제를 선정했습니다
+                  AI가 과제를 분석했습니다. 인터뷰를 시작해주세요.
                 </p>
-              </div>
-
-              {/* Topics Preview */}
-              <div className="space-y-3 mb-6">
-                <h3 className="font-medium text-gray-700">인터뷰 주제</h3>
-                {topics.map((topic, index) => (
-                  <div key={index} className="p-4 bg-gray-50 rounded-lg">
-                    <div className="font-medium text-gray-900">
-                      {index + 1}. {topic.title}
-                    </div>
-                    <p className="text-sm text-gray-500 mt-1">
-                      {topic.description}
-                    </p>
-                  </div>
-                ))}
               </div>
 
               {/* Proceed Button */}
