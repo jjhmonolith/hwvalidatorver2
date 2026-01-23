@@ -37,6 +37,7 @@ export default function InterviewPage() {
   const [expiredTopicTitle, setExpiredTopicTitle] = useState<string>('');
   const [isTopicExpiredWhileAway, setIsTopicExpiredWhileAway] = useState(false);
   const [handlingTimeout, setHandlingTimeout] = useState(false);
+  const [hasTimeInitialized, setHasTimeInitialized] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
@@ -77,6 +78,10 @@ export default function InterviewPage() {
       const currentTopic = interviewState.topics_state[interviewState.current_topic_index];
       if (currentTopic) {
         setTimeLeft(currentTopic.timeLeft);
+        // Mark time as initialized once we receive valid time from server
+        if (currentTopic.timeLeft > 0) {
+          setHasTimeInitialized(true);
+        }
       }
     }
   }, [interviewState]);
@@ -102,13 +107,14 @@ export default function InterviewPage() {
   useEffect(() => {
     if (
       timeLeft === 0 &&
+      hasTimeInitialized &&
       interviewState?.current_phase === 'topic_active' &&
       !handlingTimeout &&
       !showTransition
     ) {
       handleTopicTimeout();
     }
-  }, [timeLeft, interviewState?.current_phase, handlingTimeout, showTransition]);
+  }, [timeLeft, hasTimeInitialized, interviewState?.current_phase, handlingTimeout, showTransition]);
 
   const handleTopicTimeout = async () => {
     if (!sessionToken || handlingTimeout) return;
@@ -187,6 +193,10 @@ export default function InterviewPage() {
         if (timeValue !== undefined) {
           setTimeLeft(timeValue);
           updateTimeLeft(timeValue);
+          // Mark time as initialized once we receive valid time from server
+          if (timeValue > 0) {
+            setHasTimeInitialized(true);
+          }
         }
 
         // Check for phase changes
