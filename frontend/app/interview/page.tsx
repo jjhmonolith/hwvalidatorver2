@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Send, Mic, MicOff, Clock, ArrowRight, Volume2 } from 'lucide-react';
 import { interviewApi, speechApi, ApiError } from '@/lib/api';
@@ -12,7 +12,7 @@ interface Message {
   content: string;
 }
 
-export default function InterviewPage() {
+function InterviewPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const {
@@ -692,5 +692,22 @@ export default function InterviewPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function InterviewPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto" />
+            <p className="text-gray-500 mt-2">로딩 중...</p>
+          </div>
+        </div>
+      }
+    >
+      <InterviewPageContent />
+    </Suspense>
   );
 }
