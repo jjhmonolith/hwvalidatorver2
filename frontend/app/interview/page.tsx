@@ -366,8 +366,10 @@ export default function InterviewPage() {
       }
 
       // Reset messages for new topic
-      setMessages([{ role: 'ai', content: res.first_question }]);
-      setCurrentQuestion(res.first_question);
+      if (res.first_question) {
+        setMessages([{ role: 'ai', content: res.first_question }]);
+        setCurrentQuestion(res.first_question);
+      }
       setShowTransition(false);
       setIsTopicExpiredWhileAway(false);
       setExpiredTopicTitle('');
@@ -376,7 +378,7 @@ export default function InterviewPage() {
       await loadInterviewState();
 
       // Speak in voice mode
-      if (isVoiceMode) {
+      if (isVoiceMode && res.first_question) {
         speakText(res.first_question);
       }
     } catch (err) {
