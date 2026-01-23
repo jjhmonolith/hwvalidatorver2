@@ -110,6 +110,13 @@ export default function UploadPage() {
 
       const res = await interviewApi.uploadFile(sessionToken, file);
       setTopics(res.topics);
+      // Zustand participant 상태 업데이트 (새로고침 시 상태 복원을 위해)
+      if (participant) {
+        setParticipant({
+          ...participant,
+          status: 'file_submitted',
+        });
+      }
       setUploadComplete(true);
     } catch (err) {
       if (err instanceof ApiError) {
