@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 
 export default function UploadPage() {
   const router = useRouter();
-  const { sessionToken, participant, clearSession, _hasHydrated } = useStudentStore();
+  const { sessionToken, participant, clearSession, setParticipant, _hasHydrated } = useStudentStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [file, setFile] = useState<File | null>(null);
@@ -23,11 +23,36 @@ export default function UploadPage() {
     // Wait for hydration before checking session
     if (!_hasHydrated) return;
 
-    if (!sessionToken || !participant) {
+    if (!sessionToken) {
       router.push('/');
       return;
     }
-  }, [sessionToken, participant, router, _hasHydrated]);
+
+    // If participant info is missing, fetch it from API
+    if (!participant) {
+      fetchParticipantInfo();
+    }
+  }, [sessionToken, router, _hasHydrated]);
+
+  const fetchParticipantInfo = async () => {
+    if (!sessionToken) return;
+
+    try {
+      const res = await interviewApi.getState(sessionToken);
+      if (res.participant) {
+        setParticipant({
+          id: res.participant.id,
+          student_name: res.participant.student_name,
+          status: res.participant.status,
+        });
+      }
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        clearSession();
+        router.push('/');
+      }
+    }
+  };
 
   const handleFileSelect = (selectedFile: File) => {
     if (selectedFile.type !== 'application/pdf') {
@@ -84,13 +109,19 @@ export default function UploadPage() {
     router.push('/interview/start');
   };
 
-  // Show loading while hydrating or if no session
-  if (!_hasHydrated || !sessionToken || !participant) {
+  // Wait for hydration
+  if (!_hasHydrated) return null;
+
+  // No session token - will redirect to home in useEffect
+  if (!sessionToken) return null;
+
+  // Show loading while participant info is being fetched
+  if (!participant) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-gray-500 mt-2">로딩 중...</p>
+          <p className="text-gray-500 mt-2">상태 복원 중...</p>
         </div>
       </div>
     );

@@ -20,7 +20,7 @@ interface Summary {
 
 export default function InterviewCompletePage() {
   const router = useRouter();
-  const { sessionToken, participant, clearSession, _hasHydrated } = useStudentStore();
+  const { sessionToken, participant, clearSession, setParticipant, _hasHydrated } = useStudentStore();
 
   const [status, setStatus] = useState<string>('');
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -31,13 +31,13 @@ export default function InterviewCompletePage() {
     // Wait for hydration
     if (!_hasHydrated) return;
 
-    if (!sessionToken || !participant) {
+    if (!sessionToken) {
       router.push('/');
       return;
     }
 
     loadCompletionStatus();
-  }, [sessionToken, participant, router, _hasHydrated]);
+  }, [sessionToken, router, _hasHydrated]);
 
   const loadCompletionStatus = async () => {
     if (!sessionToken) return;
@@ -56,6 +56,15 @@ export default function InterviewCompletePage() {
       // Get current state
       const stateRes = await interviewApi.getState(sessionToken);
       setStatus(stateRes.participant.status);
+
+      // Restore participant info if missing (after page refresh)
+      if (stateRes.participant && !participant) {
+        setParticipant({
+          id: stateRes.participant.id,
+          student_name: stateRes.participant.student_name,
+          status: stateRes.participant.status,
+        });
+      }
 
       if (stateRes.participant.summary) {
         setSummary(stateRes.participant.summary as Summary);
@@ -105,7 +114,11 @@ export default function InterviewCompletePage() {
     }
   };
 
-  if (!_hasHydrated || !sessionToken || !participant) return null;
+  // Wait for hydration
+  if (!_hasHydrated) return null;
+
+  // No session token - will redirect to home in useEffect
+  if (!sessionToken) return null;
 
   if (isLoading) {
     return (

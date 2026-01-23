@@ -61,6 +61,7 @@ interface StudentState {
   isConnected: boolean;
   _hasHydrated: boolean;
   setSession: (token: string, participant: StudentParticipant) => void;
+  setParticipant: (participant: StudentParticipant) => void;
   setInterviewState: (state: InterviewState) => void;
   setCurrentQuestion: (question: string | null) => void;
   setConnected: (connected: boolean) => void;
@@ -80,6 +81,7 @@ export const useStudentStore = create<StudentState>()(
       _hasHydrated: false,
       setSession: (sessionToken, participant) =>
         set({ sessionToken, participant, isConnected: true }),
+      setParticipant: (participant) => set({ participant }),
       setInterviewState: (interviewState) => set({ interviewState }),
       setCurrentQuestion: (currentQuestion) => set({ currentQuestion }),
       setConnected: (isConnected) => set({ isConnected }),

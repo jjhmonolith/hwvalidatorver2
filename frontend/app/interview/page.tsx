@@ -22,6 +22,7 @@ export default function InterviewPage() {
     currentQuestion,
     setInterviewState,
     setCurrentQuestion,
+    setParticipant,
     updateTimeLeft,
     setConnected,
     clearSession,
@@ -73,7 +74,8 @@ export default function InterviewPage() {
     // Wait for hydration
     if (!_hasHydrated) return;
 
-    if (!sessionToken || !participant) {
+    // If no sessionToken, redirect to home
+    if (!sessionToken) {
       router.push('/');
       return;
     }
@@ -83,7 +85,7 @@ export default function InterviewPage() {
       setMessages([{ role: 'ai', content: currentQuestion }]);
     }
 
-    // Load current state
+    // Load current state (this will also restore participant info if missing)
     loadInterviewState();
 
     // Start heartbeat
@@ -94,7 +96,7 @@ export default function InterviewPage() {
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [sessionToken, participant, router, _hasHydrated]);
+  }, [sessionToken, router, _hasHydrated]);
 
   // Update time left display
   useEffect(() => {
@@ -173,6 +175,16 @@ export default function InterviewPage() {
 
     try {
       const res = await interviewApi.getState(sessionToken);
+
+      // Restore participant info if missing (after page refresh)
+      if (res.participant && !participant) {
+        setParticipant({
+          id: res.participant.id,
+          student_name: res.participant.student_name,
+          status: res.participant.status,
+        });
+      }
+
       if (res.interview_state) {
         setInterviewState(res.interview_state);
       }
@@ -384,7 +396,23 @@ export default function InterviewPage() {
     }
   };
 
-  if (!_hasHydrated || !sessionToken || !participant) return null;
+  // Wait for hydration
+  if (!_hasHydrated) return null;
+
+  // No session token - will redirect to home in useEffect
+  if (!sessionToken) return null;
+
+  // Show loading while participant info is being fetched
+  if (!participant) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-gray-500 mt-2">인터뷰 상태 복원 중...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Handle transition confirmation (for topic_expired_while_away state)
   const handleConfirmTransition = async () => {

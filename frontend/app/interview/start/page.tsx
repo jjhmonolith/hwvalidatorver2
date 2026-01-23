@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 
 export default function InterviewStartPage() {
   const router = useRouter();
-  const { sessionToken, participant, setInterviewState, setCurrentQuestion, clearSession, _hasHydrated } =
+  const { sessionToken, participant, setInterviewState, setCurrentQuestion, setParticipant, clearSession, _hasHydrated } =
     useStudentStore();
 
   const [selectedMode, setSelectedMode] = useState<'voice' | 'chat' | null>(null);
@@ -21,20 +21,29 @@ export default function InterviewStartPage() {
     // Wait for hydration
     if (!_hasHydrated) return;
 
-    if (!sessionToken || !participant) {
+    if (!sessionToken) {
       router.push('/');
       return;
     }
 
-    // Check if mode selection is needed
+    // Check if mode selection is needed (also restores participant info)
     checkInterviewState();
-  }, [sessionToken, participant, router, _hasHydrated]);
+  }, [sessionToken, router, _hasHydrated]);
 
   const checkInterviewState = async () => {
     if (!sessionToken) return;
 
     try {
       const res = await interviewApi.getState(sessionToken);
+
+      // Restore participant info if missing (after page refresh)
+      if (res.participant && !participant) {
+        setParticipant({
+          id: res.participant.id,
+          student_name: res.participant.student_name,
+          status: res.participant.status,
+        });
+      }
 
       // If interview already started, redirect
       if (
@@ -103,7 +112,23 @@ export default function InterviewStartPage() {
     }
   };
 
-  if (!_hasHydrated || !sessionToken || !participant) return null;
+  // Wait for hydration
+  if (!_hasHydrated) return null;
+
+  // No session token - will redirect to home in useEffect
+  if (!sessionToken) return null;
+
+  // Show loading while participant info is being fetched
+  if (!participant) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-gray-500 mt-2">상태 복원 중...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
