@@ -20,7 +20,7 @@ interface Summary {
 
 export default function InterviewCompletePage() {
   const router = useRouter();
-  const { sessionToken, participant, clearSession } = useStudentStore();
+  const { sessionToken, participant, clearSession, _hasHydrated } = useStudentStore();
 
   const [status, setStatus] = useState<string>('');
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -28,13 +28,16 @@ export default function InterviewCompletePage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    // Wait for hydration
+    if (!_hasHydrated) return;
+
     if (!sessionToken || !participant) {
       router.push('/');
       return;
     }
 
     loadCompletionStatus();
-  }, [sessionToken, participant, router]);
+  }, [sessionToken, participant, router, _hasHydrated]);
 
   const loadCompletionStatus = async () => {
     if (!sessionToken) return;
@@ -102,7 +105,7 @@ export default function InterviewCompletePage() {
     }
   };
 
-  if (!sessionToken || !participant) return null;
+  if (!_hasHydrated || !sessionToken || !participant) return null;
 
   if (isLoading) {
     return (

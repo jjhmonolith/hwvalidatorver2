@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Send, Mic, MicOff, Clock, ArrowRight, Volume2 } from 'lucide-react';
 import { interviewApi, speechApi, ApiError } from '@/lib/api';
 import { useStudentStore } from '@/lib/store';
@@ -14,6 +14,7 @@ interface Message {
 
 export default function InterviewPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const {
     sessionToken,
     participant,
@@ -24,6 +25,7 @@ export default function InterviewPage() {
     updateTimeLeft,
     setConnected,
     clearSession,
+    _hasHydrated,
   } = useStudentStore();
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -48,7 +50,29 @@ export default function InterviewPage() {
 
   const isVoiceMode = participant?.status === 'interview_in_progress'; // Simplified check
 
+  // Handle URL query params for transition page (from reconnect)
   useEffect(() => {
+    const showTransitionParam = searchParams.get('showTransition');
+    const expiredWhileAwayParam = searchParams.get('expiredWhileAway');
+    const expiredTitleParam = searchParams.get('expiredTitle');
+
+    if (showTransitionParam === 'true') {
+      setShowTransition(true);
+      if (expiredWhileAwayParam === 'true') {
+        setIsTopicExpiredWhileAway(true);
+        if (expiredTitleParam) {
+          setExpiredTopicTitle(decodeURIComponent(expiredTitleParam));
+        }
+      }
+      // Clean up URL
+      router.replace('/interview', { scroll: false });
+    }
+  }, [searchParams, router]);
+
+  useEffect(() => {
+    // Wait for hydration
+    if (!_hasHydrated) return;
+
     if (!sessionToken || !participant) {
       router.push('/');
       return;
@@ -70,7 +94,7 @@ export default function InterviewPage() {
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [sessionToken, participant, router]);
+  }, [sessionToken, participant, router, _hasHydrated]);
 
   // Update time left display
   useEffect(() => {
@@ -360,7 +384,7 @@ export default function InterviewPage() {
     }
   };
 
-  if (!sessionToken || !participant) return null;
+  if (!_hasHydrated || !sessionToken || !participant) return null;
 
   // Handle transition confirmation (for topic_expired_while_away state)
   const handleConfirmTransition = async () => {

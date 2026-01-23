@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 
 export default function InterviewStartPage() {
   const router = useRouter();
-  const { sessionToken, participant, setInterviewState, setCurrentQuestion, clearSession } =
+  const { sessionToken, participant, setInterviewState, setCurrentQuestion, clearSession, _hasHydrated } =
     useStudentStore();
 
   const [selectedMode, setSelectedMode] = useState<'voice' | 'chat' | null>(null);
@@ -18,6 +18,9 @@ export default function InterviewStartPage() {
   const [showModeSelection, setShowModeSelection] = useState(false);
 
   useEffect(() => {
+    // Wait for hydration
+    if (!_hasHydrated) return;
+
     if (!sessionToken || !participant) {
       router.push('/');
       return;
@@ -25,7 +28,7 @@ export default function InterviewStartPage() {
 
     // Check if mode selection is needed
     checkInterviewState();
-  }, [sessionToken, participant, router]);
+  }, [sessionToken, participant, router, _hasHydrated]);
 
   const checkInterviewState = async () => {
     if (!sessionToken) return;
@@ -100,7 +103,7 @@ export default function InterviewStartPage() {
     }
   };
 
-  if (!sessionToken || !participant) return null;
+  if (!_hasHydrated || !sessionToken || !participant) return null;
 
   return (
     <main className="min-h-screen bg-gray-50 flex items-center justify-center p-4">

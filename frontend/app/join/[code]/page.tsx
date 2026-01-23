@@ -19,7 +19,7 @@ interface SessionInfo {
 export default function JoinSessionPage() {
   const router = useRouter();
   const params = useParams();
-  const { setSession, sessionToken, clearSession } = useStudentStore();
+  const { setSession, sessionToken, clearSession, setInterviewState, _hasHydrated } = useStudentStore();
 
   const accessCode = params.code as string;
 
@@ -37,6 +37,9 @@ export default function JoinSessionPage() {
   const hasJoinedRef = useRef(false);
 
   useEffect(() => {
+    // Wait for hydration to complete before checking sessionToken
+    if (!_hasHydrated) return;
+
     // Don't reconnect if we just successfully joined
     if (hasJoinedRef.current) return;
 
@@ -47,7 +50,7 @@ export default function JoinSessionPage() {
     }
 
     loadSessionInfo();
-  }, [accessCode, sessionToken]);
+  }, [accessCode, sessionToken, _hasHydrated]);
 
   const loadSessionInfo = async () => {
     try {
@@ -73,6 +76,11 @@ export default function JoinSessionPage() {
       setIsLoading(true);
       const res = await joinApi.reconnect(sessionToken);
 
+      // Save interview_state to store for immediate use
+      if (res.interview_state) {
+        setInterviewState(res.interview_state);
+      }
+
       if (res.time_deducted && res.time_deducted > 0) {
         alert(`재접속 완료. 이탈 시간: ${formatTime(res.time_deducted)}`);
       }
@@ -83,7 +91,19 @@ export default function JoinSessionPage() {
         participantStatus === 'interview_in_progress' ||
         participantStatus === 'interview_paused'
       ) {
-        router.push('/interview');
+        // Handle show_transition_page for topic_expired_while_away
+        if (res.show_transition_page) {
+          const params = new URLSearchParams({
+            showTransition: 'true',
+            expiredWhileAway: 'true',
+          });
+          if (res.expired_topic_titles?.[0]) {
+            params.set('expiredTitle', res.expired_topic_titles[0]);
+          }
+          router.push(`/interview?${params.toString()}`);
+        } else {
+          router.push('/interview');
+        }
       } else if (participantStatus === 'file_submitted') {
         router.push('/interview/start');
       } else if (participantStatus === 'registered') {

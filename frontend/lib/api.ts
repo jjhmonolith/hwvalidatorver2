@@ -209,6 +209,9 @@ export const joinApi = {
       file_submitted?: boolean;
       analyzed_topics?: Array<{ title: string; description: string }>;
       chosen_interview_mode?: string;
+      show_transition_page?: boolean;
+      expired_topic_titles?: string[];
+      next_topic_index?: number;
     }>('/api/join/reconnect', { method: 'POST', body: JSON.stringify({ sessionToken }) }),
 };
 
