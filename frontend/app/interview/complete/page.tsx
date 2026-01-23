@@ -142,7 +142,7 @@ export default function InterviewCompletePage() {
               {getStatusMessage()}
             </h1>
             <p className="text-gray-500">
-              {participant.student_name}님의 인터뷰 결과
+              {participant?.student_name}님의 인터뷰 결과
             </p>
             <span
               className={cn(
