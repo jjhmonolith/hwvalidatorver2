@@ -205,19 +205,20 @@ router.get('/state', authenticateStudent, checkReconnection, async (req, res) =>
 
     const state = stateResult.rows[0];
 
-    // Calculate remaining time
+    // Calculate remaining time (no accumulated_pause_time - time flows during disconnection)
     let remainingTime = null;
     const topicsState = state.topics_state;
 
     if (topicsState && state.current_topic_index !== null) {
       const currentTopic = topicsState[state.current_topic_index];
 
-      if (state.current_phase === 'topic_active' && state.topic_started_at) {
-        const elapsed = (Date.now() - new Date(state.topic_started_at).getTime()) / 1000
-                        - (state.accumulated_pause_time || 0);
+      if ((state.current_phase === 'topic_active' || state.current_phase === 'topic_paused') && state.topic_started_at) {
+        const elapsed = (Date.now() - new Date(state.topic_started_at).getTime()) / 1000;
         remainingTime = Math.max(0, currentTopic.totalTime - elapsed);
-      } else if (state.current_phase === 'topic_transition') {
-        remainingTime = currentTopic.totalTime; // Full time for next topic
+      } else if (state.current_phase === 'topic_transition' || state.current_phase === 'topic_expired_while_away') {
+        // Next topic will have full time
+        const nextTopic = topicsState[state.current_topic_index + 1];
+        remainingTime = nextTopic ? nextTopic.totalTime : 0;
       } else {
         remainingTime = currentTopic.timeLeft;
       }
@@ -283,16 +284,16 @@ router.post('/heartbeat', authenticateStudent, async (req, res) => {
     const state = stateResult.rows[0];
     const topicsState = state.topics_state;
 
-    // Calculate remaining time
+    // Calculate remaining time (no accumulated_pause_time - time flows during disconnection)
     let remainingTime = null;
     let timeExpired = false;
+    let showTransitionPage = false;
 
     if (topicsState && state.current_topic_index !== null) {
       const currentTopic = topicsState[state.current_topic_index];
 
-      if (state.current_phase === 'topic_active' && state.topic_started_at) {
-        const elapsed = (Date.now() - new Date(state.topic_started_at).getTime()) / 1000
-                        - (state.accumulated_pause_time || 0);
+      if ((state.current_phase === 'topic_active' || state.current_phase === 'topic_paused') && state.topic_started_at) {
+        const elapsed = (Date.now() - new Date(state.topic_started_at).getTime()) / 1000;
         remainingTime = Math.max(0, currentTopic.totalTime - elapsed);
 
         // Check if time expired
@@ -300,7 +301,13 @@ router.post('/heartbeat', authenticateStudent, async (req, res) => {
           timeExpired = true;
         }
       } else if (state.current_phase === 'topic_transition') {
-        remainingTime = currentTopic.totalTime;
+        // Next topic will have full time
+        const nextTopic = topicsState[state.current_topic_index + 1];
+        remainingTime = nextTopic ? nextTopic.totalTime : 0;
+      } else if (state.current_phase === 'topic_expired_while_away') {
+        // Topic expired while disconnected - show transition page
+        remainingTime = 0;
+        showTransitionPage = true;
       }
     }
 
@@ -311,6 +318,7 @@ router.post('/heartbeat', authenticateStudent, async (req, res) => {
       remaining_time: Math.max(0, Math.floor(remainingTime || 0)),
       time_left: Math.max(0, Math.floor(remainingTime || 0)),
       time_expired: timeExpired,
+      show_transition_page: showTransitionPage,
       topics_state: topicsState,
     });
   } catch (error) {
@@ -497,6 +505,109 @@ router.post('/next-topic', authenticateStudent, async (req, res) => {
   } catch (error) {
     console.error('Next topic error:', error);
     res.status(500).json({ error: 'Failed to move to next topic' });
+  }
+});
+
+/**
+ * POST /api/interview/confirm-transition
+ * Confirm topic transition after reconnection (for topic_expired_while_away state)
+ */
+router.post('/confirm-transition', authenticateStudent, async (req, res) => {
+  try {
+    const participant = req.participant;
+
+    // Get current state
+    const stateResult = await db.query(
+      'SELECT * FROM interview_states WHERE participant_id = $1',
+      [participant.id]
+    );
+
+    if (stateResult.rows.length === 0) {
+      return res.status(400).json({ error: 'Interview not started' });
+    }
+
+    const state = stateResult.rows[0];
+
+    // Only allow transition from topic_expired_while_away or topic_transition
+    if (state.current_phase !== 'topic_expired_while_away' && state.current_phase !== 'topic_transition') {
+      return res.status(400).json({
+        error: 'Cannot confirm transition in current phase',
+        currentPhase: state.current_phase
+      });
+    }
+
+    const topicsState = state.topics_state;
+    const currentIndex = state.current_topic_index;
+    const nextIndex = currentIndex + 1;
+
+    // Check if there's a next topic
+    if (nextIndex >= topicsState.length) {
+      // No more topics - should finalize
+      await db.query(
+        `UPDATE interview_states
+         SET current_phase = 'finalizing'
+         WHERE participant_id = $1`,
+        [participant.id]
+      );
+
+      return res.json({
+        message: 'No more topics - finalizing',
+        should_finalize: true,
+      });
+    }
+
+    // Mark current topic as completed
+    topicsState[currentIndex].status = 'completed';
+    topicsState[currentIndex].timeLeft = 0;
+
+    // Mark next topic as active
+    topicsState[nextIndex].status = 'active';
+
+    // Generate first question for next topic
+    const topics = participant.analyzed_topics || [];
+    const nextTopic = topics[nextIndex];
+
+    const { question } = await generateQuestion({
+      topic: nextTopic,
+      assignmentText: participant.extracted_text,
+      previousQA: [],
+      studentAnswer: null,
+      interviewMode: participant.chosen_interview_mode,
+    });
+
+    // Save AI question
+    await db.query(
+      `INSERT INTO interview_conversations
+       (participant_id, topic_index, turn_index, role, content)
+       VALUES ($1, $2, 0, 'ai', $3)`,
+      [participant.id, nextIndex, question]
+    );
+
+    // Update state - start fresh with new topic
+    await db.query(
+      `UPDATE interview_states
+       SET current_topic_index = $1,
+           current_phase = 'topic_active',
+           topics_state = $2,
+           topic_started_at = NOW(),
+           topic_paused_at = NULL
+       WHERE participant_id = $3`,
+      [nextIndex, JSON.stringify(topicsState), participant.id]
+    );
+
+    res.json({
+      message: 'Transition confirmed - moved to next topic',
+      current_topic_index: nextIndex,
+      topic_index: nextIndex,
+      current_topic: nextTopic,
+      topic_title: nextTopic.title,
+      first_question: question,
+      topics_state: topicsState,
+      should_finalize: false,
+    });
+  } catch (error) {
+    console.error('Confirm transition error:', error);
+    res.status(500).json({ error: 'Failed to confirm transition' });
   }
 });
 

@@ -32,7 +32,7 @@ export function getStatusLabel(status: string): string {
     interview_in_progress: '인터뷰 중',
     interview_paused: '일시정지',
     completed: '완료',
-    abandoned: '포기',
+    abandoned: '중도 이탈',
     timeout: '시간 초과',
   };
   return labels[status] || status;

@@ -293,6 +293,26 @@ export const interviewApi = {
       topics_state: Array<{ index: number; title: string; totalTime: number; timeLeft: number; status: string; started: boolean }>;
     }>('/api/interview/next-topic', { method: 'POST', sessionToken }),
 
+  topicTimeout: (sessionToken: string) =>
+    fetchApi<{
+      message: string;
+      should_finalize: boolean;
+      next_topic_index?: number;
+      topics_state?: Array<{ index: number; title: string; totalTime: number; timeLeft: number; status: string; started: boolean }>;
+    }>('/api/interview/topic-timeout', { method: 'POST', sessionToken }),
+
+  confirmTransition: (sessionToken: string) =>
+    fetchApi<{
+      message: string;
+      should_finalize: boolean;
+      current_topic_index?: number;
+      topic_index?: number;
+      current_topic?: { title: string; description: string };
+      topic_title?: string;
+      first_question?: string;
+      topics_state?: Array<{ index: number; title: string; totalTime: number; timeLeft: number; status: string; started: boolean }>;
+    }>('/api/interview/confirm-transition', { method: 'POST', sessionToken }),
+
   complete: (sessionToken: string) =>
     fetchApi<{
       message: string;

@@ -102,27 +102,34 @@ async function checkTimeoutParticipants() {
 
 /**
  * 주제 시간 초과 처리
- * 현재 주제의 남은 시간이 0 이하인 경우 다음 주제로 전환 또는 완료 처리
+ * 현재 주제의 남은 시간이 0 이하인 경우 처리
+ *
+ * 정책 변경:
+ * - 이탈 중에도 시간이 계속 흐름 (accumulated_pause_time 제거)
+ * - 이탈 중 시간 만료 시 topic_expired_while_away 상태로 변경 (자동 전환 안함)
+ * - 접속 중 시간 만료 시 topic_transition 상태로 변경
  */
 async function checkTopicTimeouts() {
   try {
-    // 주제 진행 중이면서 시간이 초과된 참가자 조회
+    // 주제 진행 중 또는 일시정지 상태에서 시간 체크
+    // topic_active: 접속 중, topic_paused: 이탈 중
     const result = await db.query(`
       SELECT
         ist.id as state_id,
         ist.participant_id,
+        ist.current_phase,
         ist.current_topic_index,
         ist.topics_state,
         ist.topic_started_at,
-        ist.accumulated_pause_time,
         sp.student_name,
+        sp.status as participant_status,
         ass.topic_count,
         ass.topic_duration
       FROM interview_states ist
       JOIN student_participants sp ON sp.id = ist.participant_id
       JOIN assignment_sessions ass ON ass.id = sp.session_id
-      WHERE ist.current_phase = 'topic_active'
-        AND sp.status = 'interview_in_progress'
+      WHERE ist.current_phase IN ('topic_active', 'topic_paused')
+        AND sp.status IN ('interview_in_progress', 'interview_paused')
     `);
 
     let timeoutCount = 0;
@@ -133,10 +140,10 @@ async function checkTopicTimeouts() {
 
       if (!currentTopic || !row.topic_started_at) continue;
 
-      // 실제 경과 시간 계산 (일시정지 시간 제외)
+      // 실제 경과 시간 계산 (이탈 시간도 포함 - accumulated_pause_time 제거)
       const elapsedSeconds = Math.floor(
         (Date.now() - new Date(row.topic_started_at).getTime()) / 1000
-      ) - (row.accumulated_pause_time || 0);
+      );
 
       const timeLeft = currentTopic.totalTime - elapsedSeconds;
 
@@ -150,6 +157,7 @@ async function checkTopicTimeouts() {
         };
 
         const isLastTopic = row.current_topic_index >= row.topic_count - 1;
+        const isDisconnected = row.participant_status === 'interview_paused';
 
         if (isLastTopic) {
           // 마지막 주제 - 인터뷰 완료
@@ -172,15 +180,26 @@ async function checkTopicTimeouts() {
           `, [row.participant_id]);
 
           console.log(`[DisconnectChecker] Interview timeout (last topic): ${row.student_name}`);
+        } else if (isDisconnected) {
+          // 이탈 중 시간 만료 - 재접속 시 전환 페이지 표시 위해 별도 상태
+          await db.query(`
+            UPDATE interview_states
+            SET
+              current_phase = 'topic_expired_while_away',
+              topics_state = $1,
+              updated_at = NOW()
+            WHERE id = $2
+          `, [JSON.stringify(updatedTopicsState), row.state_id]);
+
+          console.log(`[DisconnectChecker] Topic expired while disconnected: ${row.student_name} (topic ${row.current_topic_index + 1})`);
         } else {
-          // 다음 주제로 전환 대기
+          // 접속 중 시간 만료 - 다음 주제로 전환 대기
           await db.query(`
             UPDATE interview_states
             SET
               current_phase = 'topic_transition',
               topics_state = $1,
               topic_started_at = NULL,
-              accumulated_pause_time = 0,
               updated_at = NOW()
             WHERE id = $2
           `, [JSON.stringify(updatedTopicsState), row.state_id]);

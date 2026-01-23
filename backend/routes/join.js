@@ -265,10 +265,8 @@ router.post('/reconnect', async (req, res) => {
         });
       }
 
-      // Calculate time deducted during disconnection (only if topic was active)
-      if (data.current_phase === 'topic_active' || data.current_phase === 'topic_paused') {
-        timeDeducted = Math.floor(disconnectedDuration);
-      }
+      // Time continues during disconnection (no pause deduction)
+      timeDeducted = Math.floor(disconnectedDuration);
 
       // Clear disconnection status and restore interview_in_progress
       await db.query(
@@ -282,15 +280,45 @@ router.post('/reconnect', async (req, res) => {
          WHERE id = $1`,
         [data.id]
       );
+
+      // Also restore interview state phase if it was paused
+      if (data.current_phase === 'topic_paused') {
+        await db.query(
+          `UPDATE interview_states
+           SET current_phase = 'topic_active',
+               updated_at = NOW()
+           WHERE participant_id = $1`,
+          [data.id]
+        );
+        data.current_phase = 'topic_active';
+      }
     }
 
-    // Calculate remaining time for current topic
+    // Check if topic expired while away - prepare transition page data
+    let showTransitionPage = false;
+    let expiredTopicTitles = [];
+    let nextTopicIndex = data.current_topic_index;
+
+    if (data.current_phase === 'topic_expired_while_away') {
+      showTransitionPage = true;
+      const currentTopic = data.topics_state?.[data.current_topic_index];
+      if (currentTopic?.title) {
+        expiredTopicTitles.push(currentTopic.title);
+      }
+      nextTopicIndex = data.current_topic_index + 1;
+    }
+
+    // Calculate remaining time for current topic (without accumulated_pause_time)
     let remainingTime = null;
     if (data.topics_state && data.current_topic_index !== null) {
       const currentTopic = data.topics_state[data.current_topic_index];
-      if (currentTopic && data.topic_started_at) {
-        const elapsed = (Date.now() - new Date(data.topic_started_at).getTime()) / 1000
-                        - (data.accumulated_pause_time || 0);
+
+      if (data.current_phase === 'topic_expired_while_away') {
+        // Topic expired - remaining time is 0
+        remainingTime = 0;
+      } else if (currentTopic && data.topic_started_at) {
+        // Time continues during disconnection (no accumulated_pause_time deduction)
+        const elapsed = (Date.now() - new Date(data.topic_started_at).getTime()) / 1000;
         remainingTime = Math.max(0, currentTopic.totalTime - elapsed);
       } else if (currentTopic) {
         remainingTime = currentTopic.timeLeft || currentTopic.totalTime;
@@ -316,6 +344,10 @@ router.post('/reconnect', async (req, res) => {
         topics_state: data.topics_state,
         remaining_time: remainingTime,
       } : null,
+      // New fields for transition page
+      show_transition_page: showTransitionPage,
+      expired_topic_titles: expiredTopicTitles,
+      next_topic_index: nextTopicIndex,
       file_submitted: !!data.submitted_file_name,
       analyzed_topics: data.analyzed_topics,
       chosen_interview_mode: data.chosen_interview_mode,

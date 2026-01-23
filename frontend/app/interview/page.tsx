@@ -34,6 +34,9 @@ export default function InterviewPage() {
   const [error, setError] = useState('');
   const [timeLeft, setTimeLeft] = useState(0);
   const [showTransition, setShowTransition] = useState(false);
+  const [expiredTopicTitle, setExpiredTopicTitle] = useState<string>('');
+  const [isTopicExpiredWhileAway, setIsTopicExpiredWhileAway] = useState(false);
+  const [handlingTimeout, setHandlingTimeout] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
@@ -95,6 +98,41 @@ export default function InterviewPage() {
     }
   }, [interviewState?.current_phase]);
 
+  // Handle topic timeout when time reaches 0
+  useEffect(() => {
+    if (
+      timeLeft === 0 &&
+      interviewState?.current_phase === 'topic_active' &&
+      !handlingTimeout &&
+      !showTransition
+    ) {
+      handleTopicTimeout();
+    }
+  }, [timeLeft, interviewState?.current_phase, handlingTimeout, showTransition]);
+
+  const handleTopicTimeout = async () => {
+    if (!sessionToken || handlingTimeout) return;
+
+    try {
+      setHandlingTimeout(true);
+      const res = await interviewApi.topicTimeout(sessionToken);
+
+      if (res.should_finalize) {
+        // Last topic - go to complete page
+        router.push('/interview/complete');
+      } else {
+        // Show transition page for next topic
+        setShowTransition(true);
+      }
+    } catch (err) {
+      console.error('Topic timeout error:', err);
+      // Even on error, try to continue
+      setShowTransition(true);
+    } finally {
+      setHandlingTimeout(false);
+    }
+  };
+
   // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -154,6 +192,14 @@ export default function InterviewPage() {
         // Check for phase changes
         if (res.current_phase === 'topic_transition') {
           setShowTransition(true);
+        } else if (res.current_phase === 'topic_expired_while_away') {
+          // Topic expired while disconnected - show transition page
+          setIsTopicExpiredWhileAway(true);
+          setShowTransition(true);
+          if (res.topics_state && interviewState?.current_topic_index !== undefined) {
+            const expiredTopic = res.topics_state[interviewState.current_topic_index];
+            setExpiredTopicTitle(expiredTopic?.title || '');
+          }
         } else if (res.current_phase === 'completed' || res.current_phase === 'finalizing') {
           router.push('/interview/complete');
         }
@@ -306,28 +352,86 @@ export default function InterviewPage() {
 
   if (!sessionToken || !participant) return null;
 
+  // Handle transition confirmation (for topic_expired_while_away state)
+  const handleConfirmTransition = async () => {
+    if (!sessionToken) return;
+
+    try {
+      setIsSubmitting(true);
+      const res = await interviewApi.confirmTransition(sessionToken);
+
+      if (res.should_finalize) {
+        router.push('/interview/complete');
+        return;
+      }
+
+      // Reset messages for new topic
+      setMessages([{ role: 'ai', content: res.first_question }]);
+      setCurrentQuestion(res.first_question);
+      setShowTransition(false);
+      setIsTopicExpiredWhileAway(false);
+      setExpiredTopicTitle('');
+
+      // Reload state to get new topic info
+      await loadInterviewState();
+
+      // Speak in voice mode
+      if (isVoiceMode) {
+        speakText(res.first_question);
+      }
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // Transition UI
   if (showTransition) {
     return (
       <main className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="max-w-lg w-full text-center">
           <div className="bg-white rounded-xl shadow-lg p-8">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <ArrowRight className="w-8 h-8 text-green-600" />
+            <div className={cn(
+              'w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4',
+              isTopicExpiredWhileAway ? 'bg-yellow-100' : 'bg-green-100'
+            )}>
+              {isTopicExpiredWhileAway ? (
+                <Clock className="w-8 h-8 text-yellow-600" />
+              ) : (
+                <ArrowRight className="w-8 h-8 text-green-600" />
+              )}
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              주제 완료!
+              {isTopicExpiredWhileAway ? '주제 시간 종료' : '주제 완료!'}
             </h1>
             <p className="text-gray-500 mb-6">
-              다음 주제로 넘어갈 준비가 되면 버튼을 눌러주세요.
+              {isTopicExpiredWhileAway ? (
+                <>
+                  {expiredTopicTitle && (
+                    <span className="font-medium text-gray-700 block mb-2">
+                      &quot;{expiredTopicTitle}&quot;
+                    </span>
+                  )}
+                  이전 주제의 시간이 종료되었습니다.
+                  <br />
+                  다음 주제로 넘어갈 준비가 되면 버튼을 눌러주세요.
+                </>
+              ) : (
+                <>
+                  다음 주제로 넘어갈 준비가 되면 버튼을 눌러주세요.
+                </>
+              )}
               <br />
-              <span className="text-sm text-green-600">
+              <span className="text-sm text-green-600 block mt-2">
                 이 화면에서는 시간이 흐르지 않습니다.
               </span>
             </p>
 
             <button
-              onClick={handleNextTopic}
+              onClick={isTopicExpiredWhileAway ? handleConfirmTransition : handleNextTopic}
               disabled={isSubmitting}
               className={cn(
                 'w-full py-3 rounded-lg font-medium text-white transition-colors flex items-center justify-center gap-2',
