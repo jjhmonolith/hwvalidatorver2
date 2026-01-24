@@ -80,11 +80,6 @@ function InterviewPageContent() {
       return;
     }
 
-    // Initialize with current question
-    if (currentQuestion) {
-      setMessages([{ role: 'ai', content: currentQuestion }]);
-    }
-
     // Load current state (this will also restore participant info if missing)
     loadInterviewState();
 
@@ -103,9 +98,12 @@ function InterviewPageContent() {
     if (interviewState?.topics_state) {
       const currentTopic = interviewState.topics_state[interviewState.current_topic_index];
       if (currentTopic) {
-        setTimeLeft(currentTopic.timeLeft);
+        // remaining_time이 있으면 서버 계산값 사용, 없으면 timeLeft 사용
+        const serverTime = interviewState.remaining_time;
+        const timeValue = serverTime !== undefined ? serverTime : currentTopic.timeLeft;
+        setTimeLeft(timeValue);
         // Mark time as initialized once we receive valid time from server
-        if (currentTopic.timeLeft > 0) {
+        if (timeValue > 0) {
           setHasTimeInitialized(true);
         }
       }
@@ -189,13 +187,22 @@ function InterviewPageContent() {
         setInterviewState(res.interview_state);
       }
 
-      // Get last AI question from conversations if available
-      if (messages.length === 0 && res.conversations && res.conversations.length > 0) {
-        const aiMessages = res.conversations.filter(c => c.role === 'ai');
-        if (aiMessages.length > 0) {
-          const lastQuestion = aiMessages[aiMessages.length - 1].content;
-          setMessages([{ role: 'ai', content: lastQuestion }]);
+      // Restore all conversations for current topic
+      if (res.conversations && res.conversations.length > 0) {
+        const restoredMessages: Message[] = res.conversations.map((c: { role: string; content: string }) => ({
+          role: c.role as 'ai' | 'student',
+          content: c.content
+        }));
+        setMessages(restoredMessages);
+
+        // Update current question to the last AI message
+        const lastAiMessage = res.conversations.filter((c: { role: string }) => c.role === 'ai').pop();
+        if (lastAiMessage) {
+          setCurrentQuestion(lastAiMessage.content);
         }
+      } else if (currentQuestion) {
+        // Fallback: use stored current question
+        setMessages([{ role: 'ai', content: currentQuestion }]);
       }
 
       // Check if interview is completed

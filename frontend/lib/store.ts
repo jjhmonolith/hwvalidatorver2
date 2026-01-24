@@ -51,6 +51,7 @@ export interface InterviewState {
   current_topic_index: number;
   current_phase: string;
   topics_state: TopicState[];
+  remaining_time?: number;  // 서버에서 계산된 남은 시간
 }
 
 interface StudentState {
