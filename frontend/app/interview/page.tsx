@@ -23,7 +23,6 @@ function InterviewPageContent() {
     setInterviewState,
     setCurrentQuestion,
     setParticipant,
-    updateTimeLeft,
     setConnected,
     clearSession,
     _hasHydrated,
@@ -48,6 +47,8 @@ function InterviewPageContent() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const isTimeInitializedRef = useRef(false);
+  const isTimerRunningRef = useRef(false);
 
   const isVoiceMode = participant?.status === 'interview_in_progress'; // Simplified check
 
@@ -93,9 +94,9 @@ function InterviewPageContent() {
     };
   }, [sessionToken, router, _hasHydrated]);
 
-  // Update time left display
+  // Update time left display (한 번만 실행 - 초기 로드 시)
   useEffect(() => {
-    if (interviewState?.topics_state) {
+    if (interviewState?.topics_state && !isTimeInitializedRef.current) {
       const currentTopic = interviewState.topics_state[interviewState.current_topic_index];
       if (currentTopic) {
         // remaining_time이 있으면 서버 계산값 사용, 없으면 timeLeft 사용
@@ -105,6 +106,7 @@ function InterviewPageContent() {
         // Mark time as initialized once we receive valid time from server
         if (timeValue > 0) {
           setHasTimeInitialized(true);
+          isTimeInitializedRef.current = true;
         }
       }
     }
@@ -112,20 +114,35 @@ function InterviewPageContent() {
 
   // Start timer countdown
   useEffect(() => {
-    if (timeLeft > 0 && interviewState?.current_phase === 'topic_active') {
+    const shouldRun = hasTimeInitialized &&
+                      interviewState?.current_phase === 'topic_active' &&
+                      !showTransition;
+
+    if (shouldRun && !isTimerRunningRef.current) {
+      isTimerRunningRef.current = true;
+
       timerRef.current = setInterval(() => {
         setTimeLeft((prev) => {
-          const newTime = Math.max(0, prev - 1);
-          updateTimeLeft(newTime);
-          return newTime;
+          if (prev <= 0) return 0;
+          return prev - 1;
         });
       }, 1000);
-
-      return () => {
-        if (timerRef.current) clearInterval(timerRef.current);
-      };
+    } else if (!shouldRun && isTimerRunningRef.current) {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      isTimerRunningRef.current = false;
     }
-  }, [interviewState?.current_phase]);
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      isTimerRunningRef.current = false;
+    };
+  }, [hasTimeInitialized, interviewState?.current_phase, showTransition]);
 
   // Handle topic timeout when time reaches 0
   useEffect(() => {
@@ -235,7 +252,6 @@ function InterviewPageContent() {
         const timeValue = res.remaining_time ?? res.time_left;
         if (timeValue !== undefined) {
           setTimeLeft(timeValue);
-          updateTimeLeft(timeValue);
           // Mark time as initialized once we receive valid time from server
           if (timeValue > 0) {
             setHasTimeInitialized(true);
