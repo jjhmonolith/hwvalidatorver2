@@ -29,11 +29,27 @@ export default function UploadPage() {
       return;
     }
 
-    // If participant info is missing, fetch it from API
-    if (!participant) {
+    // participant가 있어도 상태 확인 후 리다이렉트 필요
+    if (participant) {
+      const status = participant.status;
+      if (status === 'file_submitted') {
+        setIsRedirecting(true);
+        router.push('/interview/start');
+        return;
+      } else if (status === 'interview_in_progress' || status === 'interview_paused') {
+        setIsRedirecting(true);
+        router.push('/interview');
+        return;
+      } else if (status === 'completed' || status === 'abandoned' || status === 'timeout') {
+        setIsRedirecting(true);
+        router.push('/interview/complete');
+        return;
+      }
+    } else {
+      // participant 정보가 없으면 API에서 가져오기
       fetchParticipantInfo();
     }
-  }, [sessionToken, router, _hasHydrated]);
+  }, [sessionToken, router, _hasHydrated, participant]);
 
   const fetchParticipantInfo = async () => {
     if (!sessionToken) return;
